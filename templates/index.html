@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mouse Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #touchpad {
+            width: 100%;
+            height: 300px;
+            background-color: #eee;
+            touch-action: none;
+        }
+        .button {
+            padding: 10px;
+            margin: 5px;
+            background-color: #ddd;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            min-width: 80px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+        }
+        #networkStatus {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+        }
+        .connected {
+            background-color: #90EE90;
+        }
+        .disconnected {
+            background-color: #FFB6C1;
+        }
+        #virtual-keyboard {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1001;
+            border-top: 2px solid #ddd;
+        }
+        #keyboard-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .settings-container {
+            padding: 10px;
+            margin: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .settings-container label {
+            display: block;
+            margin: 5px 0;
+        }
+        .settings-container input {
+            width: 200px;
+        }
+        .kill-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #ff4444;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .kill-switch:hover {
+            background-color: #cc0000;
+        }
+        #touchpadFeedback {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="networkStatus">Checking network connection...</div>
+    <button class="kill-switch" id="killSwitch">⚡ Kill Server</button>
+    <div id="touchpadFeedback"></div>
+    <div class="settings-container">
+        <label>
+            Speed: <input type="range" id="sensitivity" min="0.5" max="5" step="0.1" value="2.5">
+            <span id="sensitivityValue">2.5</span>
+        </label>
+    </div>
+    <div id="touchpad"></div>
+    <div class="button-container">
+        <button class="button" id="rightClick">Right Click</button>
+        <button class="button" id="keyboardToggle">⌨️ Keyboard</button>
+    </div>
+    
+    <div id="virtual-keyboard">
+        <input type="text" id="keyboard-input" placeholder="Type here... (characters will appear as you type)">
+    </div>
+
+    <script>
+        const touchpad = document.getElementById('touchpad');
+        let lastX = 0;
+        let lastY = 0;
+        let lastClickTime = 0;
+        let lastMoveTime = 0;
+        const doubleClickDelay = 300; // milliseconds
+        let moveQueue = null;
+        let movementHistory = [];
+        const historySize = 5;
+
+        // Movement settings
+        let baseSpeed = 2.5;
+        let acceleration = 1.0;
+        const maxSpeed = 10;
+        const accelerationThreshold = 50; // ms
+
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            baseSpeed = parseFloat(e.target.value);
+            document.getElementById('sensitivityValue').textContent = baseSpeed.toFixed(1);
+        });
+
+        function calculateSmoothedMovement(dx, dy) {
+            // Add current movement to history
+            movementHistory.unshift({ dx, dy, time: Date.now() });
+            if (movementHistory.length > historySize) {
+                movementHistory.pop();
+            }
+
+            // Calculate weighted average of recent movements
+            let smoothX = 0;
+            let smoothY = 0;
+            let totalWeight = 0;
+            
+            movementHistory.forEach((move, index) => {
+                const weight = 1 / (index + 1);
+                smoothX += move.dx * weight;
+                smoothY += move.dy * weight;
+                totalWeight += weight;
+            });
+
+            return {
+                x: smoothX / totalWeight,
+                y: smoothY / totalWeight
+            };
+        }
+
+        function calculateAcceleration(currentTime) {
+            const timeDelta = currentTime - lastMoveTime;
+            if (timeDelta < accelerationThreshold) {
+                acceleration = Math.min(acceleration * 1.2, maxSpeed / baseSpeed);
+            } else {
+                acceleration = Math.max(1.0, acceleration * 0.8);
+            }
+            lastMoveTime = currentTime;
+            return acceleration;
+        }
+
+        // Use requestAnimationFrame for smooth mouse movement
+        function processMoveQueue() {
+            if (moveQueue && (Math.abs(moveQueue.x) > 0.1 || Math.abs(moveQueue.y) > 0.1)) {
+                safeFetch(`${serverAddress}/move`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(moveQueue)
+                });
+                moveQueue = null;
+            }
+            requestAnimationFrame(processMoveQueue);
+        }
+        requestAnimationFrame(processMoveQueue);
+
+        touchpad.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+
+        touchpad.addEventListener('pointermove', (e) => {
+            e.preventDefault();
+            if (e.buttons > 0) {
+                const currentTime = Date.now();
+                const deltaX = e.clientX - lastX;
+                const deltaY = e.clientY - lastY;
+                
+                // Calculate smooth movement
+                const smoothedMovement = calculateSmoothedMovement(deltaX, deltaY);
+                
+                // Apply acceleration
+                const currentAcceleration = calculateAcceleration(currentTime);
+                
+                const finalX = smoothedMovement.x * baseSpeed * currentAcceleration;
+                const finalY = smoothedMovement.y * baseSpeed * currentAcceleration;
+                
+                moveQueue = {
+                    x: finalX,
+                    y: finalY,
+                    relative: true
+                };
+
+                updateTouchpadFeedback(finalX, finalY);
+                lastX = e.clientX;
+                lastY = e.clientY;
+            }
+        });
+
+        touchpad.addEventListener('pointerup', (e) => {
+            const currentTime = new Date().getTime();
+            if (currentTime - lastClickTime < doubleClickDelay) {
+                // Double click detected - trigger left click
+                safeFetch(`${serverAddress}/click`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ button: 'left' })
+                });
+                lastClickTime = 0; // Reset to prevent triple-click
+            } else {
+                lastClickTime = currentTime;
+            }
+        });
+
+        document.getElementById('rightClick').addEventListener('click', () => {
+            safeFetch(`${serverAddress}/click`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    button: 'right'
+                })
+            });
+        });
+
+        // Simplified keyboard handling
+        document.getElementById('keyboardToggle').addEventListener('click', () => {
+            const keyboard = document.getElementById('virtual-keyboard');
+            const keyboardInput = document.getElementById('keyboard-input');
+            keyboard.style.display = keyboard.style.display === 'none' ? 'block' : 'none';
+            if (keyboard.style.display === 'block') {
+                keyboardInput.value = '';
+                lastInputValue = '';
+                keyboardInput.focus();
+            }
+        });
+
+        // Real-time character streaming
+        let lastInputValue = '';
+        document.getElementById('keyboard-input').addEventListener('input', (e) => {
+            const currentValue = e.target.value;
+            const lastChar = currentValue.slice(lastInputValue.length);
+            
+            if (currentValue.length > lastInputValue.length) {
+                safeFetch(`${serverAddress}/type`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: lastChar })
+                });
+            } else if (currentValue.length < lastInputValue.length) {
+                safeFetch(`${serverAddress}/type`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: '{BACKSPACE}' })
+                });
+            }
+            
+            lastInputValue = currentValue;
+        });
+
+        // Handle special keys
+        document.getElementById('keyboard-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                safeFetch(`${serverAddress}/type`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: '{ENTER}' })
+                });
+                e.preventDefault();
+            }
+        });
+
+        const serverAddress = window.location.origin;
+        let isConnected = false;
+
+        // Improved network check function
+        async function checkNetwork() {
+            try {
+                const response = await fetch(`${serverAddress}/network-check`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                const statusDiv = document.getElementById('networkStatus');
+                
+                if (data.status === 'connected') {
+                    statusDiv.innerHTML = `Connected! Your IP: ${data.client_ip}<br>Server IP: ${data.server_ip}`;
+                    statusDiv.className = 'connected';
+                    isConnected = true;
+                    document.getElementById('touchpad').style.pointerEvents = 'auto';
+                } else {
+                    throw new Error(data.error || 'Unknown connection error');
+                }
+            } catch (error) {
+                console.error('Network check error:', error);
+                const statusDiv = document.getElementById('networkStatus');
+                statusDiv.innerHTML = `Connection error! ${error.message}<br>Try refreshing the page.`;
+                statusDiv.className = 'disconnected';
+                isConnected = false;
+                document.getElementById('touchpad').style.pointerEvents = 'none';
+            }
+        }
+
+        // Check network more frequently at start, then slow down
+        async function startNetworkChecks() {
+            // Check immediately
+            await checkNetwork();
+            
+            // Check every second for the first 5 seconds
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                if (isConnected) break;
+                await checkNetwork();
+            }
+            
+            // If still not connected, check every 5 seconds
+            if (!isConnected) {
+                setInterval(checkNetwork, 5000);
+            }
+        }
+
+        // Start network checks
+        startNetworkChecks();
+
+        // Add error handling to fetch requests
+        function safeFetch(url, options) {
+            return fetch(url, options).catch(error => {
+                console.error('Fetch error:', error);
+                checkNetwork(); // Recheck network status on error
+                throw error;
+            });
+        }
+
+        // Add kill switch handler
+        document.getElementById('killSwitch').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to shut down the server? This will stop the remote control.')) {
+                try {
+                    await safeFetch(`${serverAddress}/kill`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    document.body.innerHTML = '<h1 style="text-align:center;margin-top:50px;">Server shutdown successful. You can close this window.</h1>';
+                } catch (error) {
+                    alert('Error shutting down server: ' + error.message);
+                }
+            }
+        });
+
+        // Add touchpad feedback
+        const feedback = document.getElementById('touchpadFeedback');
+        let feedbackTimeout;
+        
+        function updateTouchpadFeedback(x, y) {
+            feedback.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+            feedback.style.display = 'block';
+            clearTimeout(feedbackTimeout);
+            feedbackTimeout = setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 1000);
+        }
+
+        // Add keyboard shortcut for kill switch
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+                document.getElementById('killSwitch').click();
+            }
+        });
+
+        // Add double-tap detection for mobile
+        let lastTapTime = 0;
+        touchpad.addEventListener('touchend', (e) => {
+            const currentTime = Date.now();
+            const tapLength = currentTime - lastTapTime;
+            if (tapLength < 500 && tapLength > 0) {
+                safeFetch(`${serverAddress}/click`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ button: 'left' })
+                });
+            }
+            lastTapTime = currentTime;
+        });
+    </script>
+</body>
+</html>
