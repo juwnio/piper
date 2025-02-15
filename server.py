@@ -8,6 +8,8 @@ import sys
 import logging
 import os
 import signal
+from time import sleep
+from modules.cursor_control import CursorController
 
 # Disable PyAutoGUI failsafe
 pyautogui.FAILSAFE = False
@@ -98,6 +100,9 @@ def serve_qr():
 def index():
     return send_file('templates/index.html')
 
+# Initialize cursor controller
+cursor = CursorController()
+
 @app.route('/move', methods=['POST'])
 def move_mouse():
     data = request.json
@@ -105,12 +110,7 @@ def move_mouse():
     y = data.get('y', 0)
     relative = data.get('relative', True)
     
-    if relative:
-        current_x, current_y = pyautogui.position()
-        pyautogui.moveRel(x, y)
-    else:
-        pyautogui.moveTo(x, y)
-    
+    cursor.move_cursor(x, y, relative)
     return jsonify({'status': 'success'})
 
 @app.route('/click', methods=['POST'])

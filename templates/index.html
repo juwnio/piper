@@ -32,6 +32,7 @@
             position: relative;
             border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
+            margin: 20px 0;
         }
 
         .dot {
@@ -74,7 +75,7 @@
 
         #networkStatus {
             padding: 12px;
-            margin: 15px 0;
+            margin: 0 0 15px 0;
             border-radius: 8px;
             background: none;
             border: 1px solid rgba(255,255,255,0.1);
@@ -99,69 +100,44 @@
             display: none;
             z-index: 1001;
             border-top: 1px solid rgba(255,255,255,0.1);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         #keyboard-input {
             width: 100%;
             padding: 15px;
-            margin-bottom: 10px;
+            margin: 0;
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px;
             font-size: 16px;
             background: #000000;
             color: #ffffff;
             font-family: monospace;
+            box-sizing: border-box;
+            resize: none;
+            overflow: hidden;
+            min-height: 50px;
+            max-height: 150px;
         }
 
-        .settings-container {
-            padding: 15px;
-            margin: 15px 0 25px 0;  /* Increased bottom margin */
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+        @media (max-width: 600px) {
+            #keyboard-input {
+                padding: 10px;
+                font-size: 14px;
+                min-height: 40px;
+            }
+
+            #virtual-keyboard {
+                padding: 10px;
+            }
         }
 
-        .settings-container label {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .settings-container input[type="range"] {
-            width: 200px;
-            height: 2px;
-            background: rgba(255,255,255,0.3);
-            opacity: 0.3;
-            border-radius: 1px;
-            appearance: none;
-            -webkit-appearance: none;
-            transition: opacity 0.3s ease, background-color 0.3s ease;
-        }
-
-        .settings-container input[type="range"]:focus,
-        .settings-container input[type="range"]:active {
-            opacity: 1;
-            background: #ffffff;
-            outline: none;
-        }
-
-        .settings-container input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: #ffffff;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .settings-container input[type="range"]:focus::-webkit-slider-thumb,
-        .settings-container input[type="range"]:active::-webkit-slider-thumb {
-            transform: scale(1.2);
-        }
-
+        .settings-container,
+        .settings-container label,
+        .settings-container input[type="range"],
         #sensitivityValue {
-            min-width: 30px;
-            text-align: right;
+            display: none;
         }
 
         .kill-switch {
@@ -198,6 +174,25 @@
             transform: translate(-50%, -50%);
             z-index: 2;
         }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            padding: 15px;
+            background: #000000;
+            z-index: 1000;
+        }
+
+        .main-container {
+            margin-top: 80px;  /* Space for fixed header */
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
     </style>
 </head>
 <body>
@@ -205,21 +200,24 @@
         <div class="logo">Piper</div>
         <button class="kill-switch" id="killSwitch">⚡ Kill Server</button>
     </div>
-    <div id="networkStatus">Checking network connection...</div>
-    <div class="settings-container">
-        <label>
-            Speed: <input type="range" id="sensitivity" min="0.5" max="5" step="0.1" value="2.5">
-            <span id="sensitivityValue">2.5</span>
-        </label>
-    </div>
-    <div id="touchpad"></div>
-    <div class="button-container">
-        <button class="button" id="rightClick">Right Click</button>
-        <button class="button" id="keyboardToggle">⌨️ Keyboard</button>
+    
+    <div class="main-container">
+        <div id="networkStatus">Checking network connection...</div>
+        <div id="touchpad"></div>
+        <div class="button-container">
+            <button class="button" id="rightClick">Right Click</button>
+            <button class="button" id="keyboardToggle">⌨️ Keyboard</button>
+        </div>
     </div>
     
     <div id="virtual-keyboard">
-        <input type="text" id="keyboard-input" placeholder="Type here... (characters will appear as you type)">
+        <textarea id="keyboard-input" 
+                  placeholder="(characters appear as you type...)"
+                  rows="1"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"></textarea>
     </div>
 
     <script>
@@ -227,105 +225,16 @@
         let lastX = 0;
         let lastY = 0;
         let lastClickTime = 0;
-        let lastMoveTime = 0;
-        const doubleClickDelay = 300; // milliseconds
         let moveQueue = null;
-        let movementHistory = [];
-        const historySize = 5;
 
-        // Movement settings
-        let baseSpeed = 2.5;
-        let acceleration = 1.0;
-        const maxSpeed = 10;
-        const accelerationThreshold = 50; // ms
-
-        document.getElementById('sensitivity').addEventListener('input', (e) => {
-            const slider = e.target;
-            baseSpeed = parseFloat(slider.value);
-            document.getElementById('sensitivityValue').textContent = baseSpeed.toFixed(1);
-            slider.style.opacity = '1';
-            slider.style.background = '#ffffff';
-        });
-
-        document.getElementById('sensitivity').addEventListener('blur', (e) => {
-            const slider = e.target;
-            slider.style.opacity = '0.3';
-            slider.style.background = 'rgba(255,255,255,0.3)';
-        });
-
-        // Update movement settings for better responsiveness
-        const minSpeed = 0.8;
-        const accelerationFactor = 1.3;
-        const smoothingFactor = 0.6;
-        const movementThreshold = 0.05;
-        let currentSpeed = baseSpeed;
-        
-        function calculateSmoothedMovement(dx, dy) {
-            // Add current movement to history with timestamp
-            const now = Date.now();
-            movementHistory.unshift({ dx, dy, time: now });
-            if (movementHistory.length > historySize) {
-                movementHistory.pop();
-            }
-
-            // Calculate velocity-based smoothing
-            let smoothX = 0;
-            let smoothY = 0;
-            let totalWeight = 0;
-            let velocity = 0;
-            
-            movementHistory.forEach((move, index) => {
-                const age = now - move.time;
-                const weight = Math.pow(smoothingFactor, index);
-                smoothX += move.dx * weight;
-                smoothY += move.dy * weight;
-                totalWeight += weight;
-                
-                if (index === 0) {
-                    velocity = Math.hypot(move.dx, move.dy);
-                }
-            });
-
-            // Apply non-linear acceleration based on movement speed
-            const normalizedVelocity = Math.min(1, velocity / 50);
-            currentSpeed = baseSpeed + (maxSpeed - baseSpeed) * Math.pow(normalizedVelocity, 2);
-            
-            // Apply speed limits
-            currentSpeed = Math.max(minSpeed, Math.min(maxSpeed, currentSpeed));
-
-            return {
-                x: (smoothX / totalWeight) * currentSpeed,
-                y: (smoothY / totalWeight) * currentSpeed
-            };
-        }
-
-        function calculateAcceleration(currentTime) {
-            const timeDelta = currentTime - lastMoveTime;
-            if (timeDelta < accelerationThreshold) {
-                acceleration = Math.min(acceleration * 1.2, maxSpeed / baseSpeed);
-            } else {
-                acceleration = Math.max(1.0, acceleration * 0.8);
-            }
-            lastMoveTime = currentTime;
-            return acceleration;
-        }
-
-        // Update movement processing for better responsiveness
+        // Simplified movement handling
         function processMoveQueue() {
             if (moveQueue) {
-                const magnitude = Math.hypot(moveQueue.x, moveQueue.y);
-                if (magnitude > movementThreshold) {
-                    // Normalize and apply enhanced movement
-                    const scale = Math.pow(magnitude, 0.8); // Reduced power curve for more control
-                    moveQueue.x = (moveQueue.x / magnitude) * scale;
-                    moveQueue.y = (moveQueue.y / magnitude) * scale;
-                    
-                    safeFetch(`${serverAddress}/move`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(moveQueue)
-                    });
-                }
+                safeFetch(`${serverAddress}/move`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(moveQueue)
+                });
                 moveQueue = null;
             }
             requestAnimationFrame(processMoveQueue);
@@ -374,7 +283,7 @@
                     dot.style.opacity = opacity;
                     dot.classList.add('active');
                 } else {
-                    dot.style.opacity = 0.05; // Very low default opacity
+                    dot.style.opacity = 0.09; // Very low default opacity
                     dot.classList.remove('active');
                 }
             });
@@ -415,33 +324,33 @@
                 const deltaX = e.clientX - lastX;
                 const deltaY = e.clientY - lastY;
                 
-                // Apply improved movement calculation
-                const smoothedMovement = calculateSmoothedMovement(deltaX, deltaY);
-                
                 moveQueue = {
-                    x: smoothedMovement.x,
-                    y: smoothedMovement.y,
+                    x: deltaX,
+                    y: deltaY,
                     relative: true
                 };
 
                 lastX = e.clientX;
                 lastY = e.clientY;
 
-                // Update touch point visualization
-                const touchRect = touchpad.getBoundingClientRect();
-                const x = e.clientX - touchRect.left;
-                const y = e.clientY - touchRect.top;
-                
-                // Remove old touch points
-                const points = document.querySelectorAll('.touch-point');
-                points.forEach(point => point.remove());
-                
-                createTouchPoint(x, y);
-
-                // Update dots opacity
-                updateDotsOpacity(x, y);
+                // Update visual feedback
+                updateTouchVisualization(e);
             }
         });
+
+        function updateTouchVisualization(e) {
+            const touchRect = touchpad.getBoundingClientRect();
+            const x = e.clientX - touchRect.left;
+            const y = e.clientY - touchRect.top;
+            
+            // Update touch point
+            const points = document.querySelectorAll('.touch-point');
+            points.forEach(point => point.remove());
+            createTouchPoint(x, y);
+
+            // Update dots
+            updateDotsOpacity(x, y);
+        }
 
         touchpad.addEventListener('pointerup', (e) => {
             const currentTime = new Date().getTime();
@@ -460,7 +369,7 @@
             // Reset all dots to low opacity
             const dots = document.querySelectorAll('.dot');
             dots.forEach(dot => {
-                dot.style.opacity = 0.05;
+                dot.style.opacity = 0.09;
                 dot.classList.remove('active');
             });
 
@@ -498,6 +407,7 @@
                 keyboardInput.value = '';
                 lastInputValue = '';
                 keyboardInput.focus();
+                adjustTextareaHeight();
             }
         });
 
@@ -522,6 +432,7 @@
             }
             
             lastInputValue = currentValue;
+            adjustTextareaHeight();
         });
 
         // Handle special keys
@@ -664,6 +575,181 @@
                 e.preventDefault();
             }
         }, { passive: false });
+
+        // Add after existing variables
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let initialTouchDistance = 0;
+        let isGestureInProgress = false;
+        
+        // Add gesture configuration
+        const gestureConfig = {
+            minSwipeDistance: 100,      // Increased from 50
+            maxSwipeTime: 2000,         // Increased from 300ms to 2000ms
+            minPinchChange: 0.3,        // Increased from 0.2
+            gestureStartDelay: 200      // New: delay after click before gesture starts
+        };
+
+        let gestureState = {
+            isClickStarted: false,
+            clickStartTime: 0,
+            swipeStartPosition: null,
+            currentGesture: null
+        };
+
+        function resetGestureState() {
+            gestureState = {
+                isClickStarted: false,
+                clickStartTime: 0,
+                swipeStartPosition: null,
+                currentGesture: null
+            };
+        }
+
+        function getGestureDirection(startX, startY, endX, endY) {
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
+            
+            if (absX > absY && absX > gestureConfig.minSwipeDistance) {
+                return deltaX > 0 ? 'swipe_right' : 'swipe_left';
+            } else if (absY > absX && absY > gestureConfig.minSwipeDistance) {
+                return deltaY > 0 ? 'swipe_down' : 'swipe_up';
+            }
+            return null;
+        }
+
+        // Update touchpad event listeners
+        touchpad.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            gestureState.isClickStarted = true;
+            gestureState.clickStartTime = Date.now();
+            
+            // After short delay, start tracking for gesture
+            setTimeout(() => {
+                if (gestureState.isClickStarted) {
+                    gestureState.swipeStartPosition = {
+                        x: e.clientX,
+                        y: e.clientY
+                    };
+                }
+            }, gestureConfig.gestureStartDelay);
+        });
+
+        touchpad.addEventListener('pointermove', (e) => {
+            if (!gestureState.isClickStarted || !gestureState.swipeStartPosition) return;
+
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - gestureState.clickStartTime;
+            
+            if (elapsedTime < gestureConfig.maxSwipeTime) {
+                const gesture = getGestureDirection(
+                    gestureState.swipeStartPosition.x,
+                    gestureState.swipeStartPosition.y,
+                    e.clientX,
+                    e.clientY
+                );
+
+                if (gesture && gesture !== gestureState.currentGesture) {
+                    gestureState.currentGesture = gesture;
+                    showGestureHint(gesture);
+                }
+            }
+        });
+
+        touchpad.addEventListener('pointerup', (e) => {
+            if (!gestureState.isClickStarted || !gestureState.swipeStartPosition) {
+                resetGestureState();
+                return;
+            }
+
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - gestureState.clickStartTime;
+            
+            if (elapsedTime < gestureConfig.maxSwipeTime) {
+                const gesture = getGestureDirection(
+                    gestureState.swipeStartPosition.x,
+                    gestureState.swipeStartPosition.y,
+                    e.clientX,
+                    e.clientY
+                );
+
+                if (gesture) {
+                    safeFetch(`${serverAddress}/gesture`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ gesture })
+                    });
+                }
+            }
+
+            resetGestureState();
+        });
+
+        
+        // Handle start of touch
+        touchpad.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Two finger pinch start
+                initialTouchDistance = getTouchDistance(e.touches);
+                isGestureInProgress = true;
+                e.preventDefault();
+            } else if (e.touches.length === 1) {
+                // Single finger swipe start
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchStartTime = Date.now();
+            }
+        });
+
+        // Handle touch movement
+        touchpad.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                // Handle pinch zoom
+                const currentDistance = getTouchDistance(e.touches);
+                const scale = currentDistance / initialTouchDistance;
+                
+                if (Math.abs(scale - 1) > gestureConfig.minPinchChange) {
+                    safeFetch(`${serverAddress}/gesture`, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            gesture: 'pinch',
+                            scale: scale
+                        })
+                    });
+                }
+            }
+        });
+
+        // Handle touch end
+        touchpad.addEventListener('touchend', (e) => {
+            // Calculate swipe
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const deltaTime = Date.now() - touchStartTime;
+
+            if (deltaTime < gestureConfig.maxSwipeTime) {
+                const gesture = getGestureDirection(deltaX, deltaY);
+                if (gesture) {
+                    safeFetch(`${serverAddress}/gesture`, {
+                        method: 'POST',
+                        body: JSON.stringify({ gesture })
+                    });
+                }
+            }
+        });
+
+        // Auto-resize textarea
+        function adjustTextareaHeight() {
+            keyboardInput.style.height = 'auto';
+            keyboardInput.style.height = Math.min(150, Math.max(50, keyboardInput.scrollHeight)) + 'px';
+        }
+
+        // ...rest of existing code...
     </script>
 </body>
 </html>
