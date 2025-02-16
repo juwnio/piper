@@ -104,6 +104,7 @@ The `CursorController` class has the following methods:
 
 A basic HTML file that provides a minimal user interface with buttons for actions like right click and opening a keyboard interface (implementation for these actions would need to be added with javascript to send requests to the Flask server).  It also includes a network connection check.
 
+![brandbird](https://github.com/user-attachments/assets/027a97e6-ae94-49c9-84eb-7f7ab2a153f7)
 
 
 ## Network Configuration
