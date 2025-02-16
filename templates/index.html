@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Remote Mouse</title>
+    <title>Piper</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,42 +14,47 @@
             margin: 0;
             background-color: #f0f0f0;
         }
+
         #touchpad {
             width: 300px;
             height: 200px;
             background-color: #fff;
             /* border: 1px solid #ccc;  Removed boarder */
             margin-bottom: 20px;
-            touch-action: none; /* Disable default touch actions */
+            touch-action: none;
+            /* Disable default touch actions */
         }
+
         #buttons {
             display: flex;
             gap: 10px;
         }
+
         button {
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
         }
+
         #keyboard {
             margin-top: 20px;
         }
+
         input[type="text"] {
             padding: 10px;
             font-size: 16px;
         }
     </style>
 </head>
+
 <body>
     <h1>Remote Mouse</h1>
     <div id="touchpad"></div>
     <div id="buttons">
-        <button onclick="clickButton('left')">Left Click</button>
         <button onclick="clickButton('right')">Right Click</button>
     </div>
     <div id="keyboard">
         <input type="text" id="textInput" placeholder="Type here">
-        <button onclick="typeText()">Send</button>
         <button onclick="sendSpecialKey('{BACKSPACE}')">Backspace</button>
         <button onclick="sendSpecialKey('{ENTER}')">Enter</button>
     </div>
@@ -62,6 +68,8 @@
         let velocityY = 0;
         let lastUpdate = Date.now();
         let serverURL = '';
+
+        let lastTap = null;
 
         // Function to extract server URL from QR code image
         function getServerURL() {
@@ -97,6 +105,18 @@
             lastX = e.touches[0].clientX;
             lastY = e.touches[0].clientY;
             lastUpdate = Date.now();
+
+            // Double-click implementation
+            const now = new Date().getTime();
+            const DOUBLE_CLICK_THRESHOLD = 300; // Adjust this value as needed
+
+            if (lastTap && (now - lastTap) < DOUBLE_CLICK_THRESHOLD) {
+                // Double-click detected, perform left click
+                clickButton('left');
+                lastTap = null;
+            } else {
+                lastTap = now;
+            }
         });
 
         touchpad.addEventListener('touchmove', (e) => {
@@ -136,7 +156,10 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ x: x, y: y })
+                body: JSON.stringify({
+                    x: x,
+                    y: y
+                })
             });
         }
 
@@ -148,23 +171,29 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ button: button })
+                body: JSON.stringify({
+                    button: button
+                })
             });
         }
 
-        function typeText() {
-            const text = document.getElementById('textInput').value;
-            // Use serverURL if available, otherwise use relative path
-            const url = serverURL ? `${serverURL}/type` : '/type';
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ text: text })
-            });
-            document.getElementById('textInput').value = ''; // Clear input after sending
-        }
+        // Function to send text as it's being typed
+        document.getElementById('textInput').addEventListener('input', function (e) {
+            const text = e.data; // Get the last character typed
+            if (text) {
+                // Use serverURL if available, otherwise use relative path
+                const url = serverURL ? `${serverURL}/type` : '/type';
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text
+                    })
+                });
+            }
+        });
 
         function sendSpecialKey(key) {
             // Use serverURL if available, otherwise use relative path
@@ -174,7 +203,9 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ text: key })
+                body: JSON.stringify({
+                    text: key
+                })
             });
         }
 
@@ -187,4 +218,5 @@
         }
     </script>
 </body>
+
 </html>
