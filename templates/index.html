@@ -1,755 +1,190 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mouse Control</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Remote Mouse</title>
     <style>
         body {
-            background-color: #000000;
-            color: #ffffff;
-            margin: 0;
-            padding: 15px;
-            font-family: monospace;
-        }
-
-        .logo {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #ffffff;
-            opacity: 0.8;
-            z-index: 1000;
-        }
-
-        #touchpad {
-            width: 100%;
-            height: 300px;
-            background: #000000;
-            touch-action: none;
-            border-radius: 20px;
-            position: relative;
-            border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .dot {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #ffffff;
-            border-radius: 50%;
-            transition: opacity 0.2s ease-out;
-        }
-
-        .button {
-            padding: 12px 20px;
-            margin: 5px;
-            background: none;
-            border: none;
-            font-size: 16px;
-            color: #ffffff;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
-            font-family: monospace;
-        }
-
-        .button:hover {
-            opacity: 0.9;
-        }
-
-        .button:active {
-            opacity: 1;
-        }
-
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        #networkStatus {
-            padding: 12px;
-            margin: 0 0 15px 0;
-            border-radius: 8px;
-            background: none;
-            border: 1px solid rgba(255,255,255,0.1);
-            font-family: monospace;
-        }
-
-        .connected {
-            border-color: rgba(255,255,255,0.3) !important;
-        }
-
-        .disconnected {
-            border-color: rgba(255,255,255,0.1) !important;
-        }
-
-        #virtual-keyboard {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #000000;
-            padding: 15px;
-            display: none;
-            z-index: 1001;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        #keyboard-input {
-            width: 100%;
-            padding: 15px;
-            margin: 0;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            font-size: 16px;
-            background: #000000;
-            color: #ffffff;
-            font-family: monospace;
-            box-sizing: border-box;
-            resize: none;
-            overflow: hidden;
-            min-height: 50px;
-            max-height: 150px;
-        }
-
-        @media (max-width: 600px) {
-            #keyboard-input {
-                padding: 10px;
-                font-size: 14px;
-                min-height: 40px;
-            }
-
-            #virtual-keyboard {
-                padding: 10px;
-            }
-        }
-
-        .settings-container,
-        .settings-container label,
-        .settings-container input[type="range"],
-        #sensitivityValue {
-            display: none;
-        }
-
-        .kill-switch {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            background: none;
-            color: #ffffff;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 1000;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
-            font-family: monospace;
-        }
-
-        .kill-switch:hover {
-            opacity: 0.9;
-        }
-
-        .kill-switch:active {
-            opacity: 1;
-        }
-
-        .touch-point {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-        }
-
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            padding: 15px;
-            background: #000000;
-            z-index: 1000;
-        }
-
-        .main-container {
-            margin-top: 80px;  /* Space for fixed header */
-            padding: 15px;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #touchpad {
+            width: 300px;
+            height: 200px;
+            background-color: #fff;
+            /* border: 1px solid #ccc;  Removed boarder */
+            margin-bottom: 20px;
+            touch-action: none; /* Disable default touch actions */
+        }
+        #buttons {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #keyboard {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">Piper</div>
-        <button class="kill-switch" id="killSwitch">⚡ Kill Server</button>
+    <h1>Remote Mouse</h1>
+    <div id="touchpad"></div>
+    <div id="buttons">
+        <button onclick="clickButton('left')">Left Click</button>
+        <button onclick="clickButton('right')">Right Click</button>
     </div>
-    
-    <div class="main-container">
-        <div id="networkStatus">Checking network connection...</div>
-        <div id="touchpad"></div>
-        <div class="button-container">
-            <button class="button" id="rightClick">Right Click</button>
-            <button class="button" id="keyboardToggle">⌨️ Keyboard</button>
-        </div>
+    <div id="keyboard">
+        <input type="text" id="textInput" placeholder="Type here">
+        <button onclick="typeText()">Send</button>
+        <button onclick="sendSpecialKey('{BACKSPACE}')">Backspace</button>
+        <button onclick="sendSpecialKey('{ENTER}')">Enter</button>
     </div>
-    
-    <div id="virtual-keyboard">
-        <textarea id="keyboard-input" 
-                  placeholder="(characters appear as you type...)"
-                  rows="1"
-                  autocomplete="off"
-                  autocorrect="off"
-                  autocapitalize="off"
-                  spellcheck="false"></textarea>
-    </div>
-
+    <button onclick="killServer()">Kill Server</button>
     <script>
         const touchpad = document.getElementById('touchpad');
         let lastX = 0;
         let lastY = 0;
-        let lastClickTime = 0;
-        let moveQueue = null;
+        let isTouch = false;
+        let velocityX = 0;
+        let velocityY = 0;
+        let lastUpdate = Date.now();
+        let serverURL = '';
 
-        // Simplified movement handling
-        function processMoveQueue() {
-            if (moveQueue) {
-                safeFetch(`${serverAddress}/move`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(moveQueue)
+        // Function to extract server URL from QR code image
+        function getServerURL() {
+            fetch('/qr')
+                .then(response => response.blob())
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64data = reader.result;
+                        // Regular expression to extract URL from base64 data
+                        const urlRegex = /http:\/\/[^"]+/;
+                        const match = base64data.match(urlRegex);
+                        if (match) {
+                            serverURL = match[0];
+                        } else {
+                            serverURL = `http://${window.location.hostname}:5000`;
+                        }
+                        console.log('Server URL:', serverURL);
+                    };
+                    reader.readAsDataURL(blob);
+                })
+                .catch(error => {
+                    console.error('Error fetching QR code:', error);
+                    serverURL = `http://${window.location.hostname}:5000`;
                 });
-                moveQueue = null;
-            }
-            requestAnimationFrame(processMoveQueue);
-        }
-        requestAnimationFrame(processMoveQueue);
-
-        // Create dots pattern
-        function createDots() {
-            // Remove existing dots
-            const existingDots = document.querySelectorAll('.dot');
-            existingDots.forEach(dot => dot.remove());
-
-            const spacing = 20; // Smaller spacing between dots
-            const touchpadRect = touchpad.getBoundingClientRect();
-            const rows = Math.floor(touchpadRect.height / spacing);
-            const cols = Math.floor(touchpadRect.width / spacing);
-            
-            // Calculate margins to center the grid
-            const marginLeft = (touchpadRect.width - (cols * spacing)) / 2;
-            const marginTop = (touchpadRect.height - (rows * spacing)) / 2;
-
-            // Create symmetric grid of dots
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const dot = document.createElement('div');
-                    dot.className = 'dot';
-                    dot.style.left = `${marginLeft + (col * spacing)}px`;
-                    dot.style.top = `${marginTop + (row * spacing)}px`;
-                    touchpad.appendChild(dot);
-                }
-            }
         }
 
-        function updateDotsOpacity(x, y) {
-            const dots = document.querySelectorAll('.dot');
-            const touchRect = touchpad.getBoundingClientRect();
-            
-            dots.forEach(dot => {
-                const dotRect = dot.getBoundingClientRect();
-                const dotX = dotRect.left - touchRect.left;
-                const dotY = dotRect.top - touchRect.top;
-                const distance = Math.hypot(x - dotX, y - dotY);
-                
-                if (distance < 40) { // Smaller radius for closer dots
-                    const opacity = Math.min(1, 2 - (distance / 20)); // Sharper falloff
-                    dot.style.opacity = opacity;
-                    dot.classList.add('active');
-                } else {
-                    dot.style.opacity = 0.09; // Very low default opacity
-                    dot.classList.remove('active');
-                }
-            });
-        }
+        // Call getServerURL when the page loads
+        getServerURL();
 
-        // Call createDots initially
-        createDots();
-
-        // Recreate dots when window is resized
-        window.addEventListener('resize', createDots);
-
-        // Add touch point visualization
-        function createTouchPoint(x, y) {
-            const point = document.createElement('div');
-            point.className = 'touch-point';
-            point.style.left = `${x}px`;
-            point.style.top = `${y}px`;
-            touchpad.appendChild(point);
-            return point;
-        }
-
-        touchpad.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            lastX = e.clientX;
-            lastY = e.clientY;
-            
-            const touchRect = touchpad.getBoundingClientRect();
-            const x = e.clientX - touchRect.left;
-            const y = e.clientY - touchRect.top;
-            
-            updateDotsOpacity(x, y);
-            createTouchPoint(x, y);
+        touchpad.addEventListener('touchstart', (e) => {
+            isTouch = true;
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            lastUpdate = Date.now();
         });
 
-        touchpad.addEventListener('pointermove', (e) => {
-            e.preventDefault();
-            if (e.buttons > 0) {
-                const deltaX = e.clientX - lastX;
-                const deltaY = e.clientY - lastY;
-                
-                moveQueue = {
-                    x: deltaX,
-                    y: deltaY,
-                    relative: true
-                };
+        touchpad.addEventListener('touchmove', (e) => {
+            if (!isTouch) return;
 
-                lastX = e.clientX;
-                lastY = e.clientY;
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
 
-                // Update visual feedback
-                updateTouchVisualization(e);
-            }
+            // Calculate velocity
+            const now = Date.now();
+            const timeDelta = now - lastUpdate;
+            velocityX = (currentX - lastX) / timeDelta;
+            velocityY = (currentY - lastY) / timeDelta;
+
+            // Apply prediction
+            const predictedX = currentX + velocityX * timeDelta;
+            const predictedY = currentY + velocityY * timeDelta;
+
+            moveMouse(currentX - lastX, currentY - lastY);
+
+            lastX = currentX;
+            lastY = currentY;
+            lastUpdate = now;
         });
 
-        function updateTouchVisualization(e) {
-            const touchRect = touchpad.getBoundingClientRect();
-            const x = e.clientX - touchRect.left;
-            const y = e.clientY - touchRect.top;
-            
-            // Update touch point
-            const points = document.querySelectorAll('.touch-point');
-            points.forEach(point => point.remove());
-            createTouchPoint(x, y);
-
-            // Update dots
-            updateDotsOpacity(x, y);
-        }
-
-        touchpad.addEventListener('pointerup', (e) => {
-            const currentTime = new Date().getTime();
-            if (currentTime - lastClickTime < doubleClickDelay) {
-                // Double click detected - trigger left click
-                safeFetch(`${serverAddress}/click`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ button: 'left' })
-                });
-                lastClickTime = 0; // Reset to prevent triple-click
-            } else {
-                lastClickTime = currentTime;
-            }
-            
-            // Reset all dots to low opacity
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach(dot => {
-                dot.style.opacity = 0.09;
-                dot.classList.remove('active');
-            });
-
-            // Remove touch points
-            const points = document.querySelectorAll('.touch-point');
-            points.forEach(point => point.remove());
+        touchpad.addEventListener('touchend', () => {
+            isTouch = false;
+            velocityX = 0;
+            velocityY = 0;
         });
 
-        document.getElementById('rightClick').addEventListener('click', () => {
-            safeFetch(`${serverAddress}/click`, {
+        function moveMouse(x, y) {
+            // Use serverURL if available, otherwise use relative path
+            const url = serverURL ? `${serverURL}/move` : '/move';
+            fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    button: 'right'
-                })
-            });
-        });
-
-        // Simplified keyboard handling
-        document.getElementById('keyboardToggle').addEventListener('click', () => {
-            const keyboard = document.getElementById('virtual-keyboard');
-            const keyboardInput = document.getElementById('keyboard-input');
-            const isVisible = keyboard.style.display === 'block';
-            
-            if (isVisible) {
-                // Hiding keyboard
-                keyboard.style.display = 'none';
-                keyboardInput.value = '';
-                lastInputValue = '';
-            } else {
-                // Showing keyboard
-                keyboard.style.display = 'block';
-                keyboardInput.value = '';
-                lastInputValue = '';
-                keyboardInput.focus();
-                adjustTextareaHeight();
-            }
-        });
-
-        // Real-time character streaming
-        let lastInputValue = '';
-        document.getElementById('keyboard-input').addEventListener('input', (e) => {
-            const currentValue = e.target.value;
-            const lastChar = currentValue.slice(lastInputValue.length);
-            
-            if (currentValue.length > lastInputValue.length) {
-                safeFetch(`${serverAddress}/type`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: lastChar })
-                });
-            } else if (currentValue.length < lastInputValue.length) {
-                safeFetch(`${serverAddress}/type`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: '{BACKSPACE}' })
-                });
-            }
-            
-            lastInputValue = currentValue;
-            adjustTextareaHeight();
-        });
-
-        // Handle special keys
-        document.getElementById('keyboard-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                safeFetch(`${serverAddress}/type`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: '{ENTER}' })
-                });
-                e.preventDefault();
-            }
-        });
-
-        // Add keyboard blur handler
-        document.getElementById('keyboard-input').addEventListener('blur', () => {
-            const keyboard = document.getElementById('virtual-keyboard');
-            keyboard.style.display = 'none';
-            document.getElementById('keyboard-input').value = '';
-            lastInputValue = '';
-        });
-
-        const serverAddress = window.location.origin;
-        let isConnected = false;
-
-        // Improved network check function
-        async function checkNetwork() {
-            try {
-                const response = await fetch(`${serverAddress}/network-check`);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const data = await response.json();
-                const statusDiv = document.getElementById('networkStatus');
-                
-                if (data.status === 'connected') {
-                    statusDiv.innerHTML = `Connected! Your IP: ${data.client_ip}<br>Server IP: ${data.server_ip}`;
-                    statusDiv.className = 'connected';
-                    isConnected = true;
-                    document.getElementById('touchpad').style.pointerEvents = 'auto';
-                    
-                    // Auto-hide successful connection message after 3 seconds
-                    setTimeout(() => {
-                        if (isConnected) {
-                            statusDiv.style.display = 'none';
-                        }
-                    }, 3000);
-                } else {
-                    throw new Error(data.error || 'Unknown connection error');
-                }
-            } catch (error) {
-                console.error('Network check error:', error);
-                const statusDiv = document.getElementById('networkStatus');
-                statusDiv.style.display = 'block'; // Always show error messages
-                statusDiv.innerHTML = `Connection error! ${error.message}<br>Try refreshing the page.`;
-                statusDiv.className = 'disconnected';
-                isConnected = false;
-                document.getElementById('touchpad').style.pointerEvents = 'none';
-            }
-        }
-
-        // Check network more frequently at start, then slow down
-        async function startNetworkChecks() {
-            // Check immediately
-            await checkNetwork();
-            
-            // Check every second for the first 5 seconds
-            for (let i = 0; i < 5; i++) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                if (isConnected) break;
-                await checkNetwork();
-            }
-            
-            // If still not connected, check every 5 seconds
-            if (!isConnected) {
-                setInterval(checkNetwork, 5000);
-            }
-        }
-
-        // Start network checks
-        startNetworkChecks();
-
-        // Add error handling to fetch requests
-        function safeFetch(url, options) {
-            return fetch(url, options).catch(error => {
-                console.error('Fetch error:', error);
-                checkNetwork(); // Recheck network status on error
-                throw error;
+                body: JSON.stringify({ x: x, y: y })
             });
         }
 
-        // Add kill switch handler
-        document.getElementById('killSwitch').addEventListener('click', async () => {
-            if (confirm('Are you sure you want to shut down the server? This will stop the remote control.')) {
-                try {
-                    await safeFetch(`${serverAddress}/kill`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    document.body.innerHTML = '<h1 style="text-align:center;margin-top:50px;">Server shutdown successful. You can close this window.</h1>';
-                } catch (error) {
-                    alert('Error shutting down server: ' + error.message);
-                }
-            }
-        });
-
-        // Add keyboard shortcut for kill switch
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key === 'K') {
-                document.getElementById('killSwitch').click();
-            }
-        });
-
-        // Add double-tap detection for mobile
-        let lastTapTime = 0;
-        touchpad.addEventListener('touchend', (e) => {
-            const currentTime = Date.now();
-            const tapLength = currentTime - lastTapTime;
-            if (tapLength < 500 && tapLength > 0) {
-                safeFetch(`${serverAddress}/click`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ button: 'left' })
-                });
-            }
-            lastTapTime = currentTime;
-        });
-
-        // Prevent zooming on double tap
-        document.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTapTime < 300) {
-                e.preventDefault();
-            }
-            lastTapTime = now;
-        }, { passive: false });
-
-        // Prevent pinch zoom
-        document.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        // Add after existing variables
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchStartTime = 0;
-        let initialTouchDistance = 0;
-        let isGestureInProgress = false;
-        
-        // Add gesture configuration
-        const gestureConfig = {
-            minSwipeDistance: 100,      // Increased from 50
-            maxSwipeTime: 2000,         // Increased from 300ms to 2000ms
-            minPinchChange: 0.3,        // Increased from 0.2
-            gestureStartDelay: 200      // New: delay after click before gesture starts
-        };
-
-        let gestureState = {
-            isClickStarted: false,
-            clickStartTime: 0,
-            swipeStartPosition: null,
-            currentGesture: null
-        };
-
-        function resetGestureState() {
-            gestureState = {
-                isClickStarted: false,
-                clickStartTime: 0,
-                swipeStartPosition: null,
-                currentGesture: null
-            };
+        function clickButton(button) {
+            // Use serverURL if available, otherwise use relative path
+            const url = serverURL ? `${serverURL}/click` : '/click';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ button: button })
+            });
         }
 
-        function getGestureDirection(startX, startY, endX, endY) {
-            const deltaX = endX - startX;
-            const deltaY = endY - startY;
-            const absX = Math.abs(deltaX);
-            const absY = Math.abs(deltaY);
-            
-            if (absX > absY && absX > gestureConfig.minSwipeDistance) {
-                return deltaX > 0 ? 'swipe_right' : 'swipe_left';
-            } else if (absY > absX && absY > gestureConfig.minSwipeDistance) {
-                return deltaY > 0 ? 'swipe_down' : 'swipe_up';
-            }
-            return null;
+        function typeText() {
+            const text = document.getElementById('textInput').value;
+            // Use serverURL if available, otherwise use relative path
+            const url = serverURL ? `${serverURL}/type` : '/type';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: text })
+            });
+            document.getElementById('textInput').value = ''; // Clear input after sending
         }
 
-        // Update touchpad event listeners
-        touchpad.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            gestureState.isClickStarted = true;
-            gestureState.clickStartTime = Date.now();
-            
-            // After short delay, start tracking for gesture
-            setTimeout(() => {
-                if (gestureState.isClickStarted) {
-                    gestureState.swipeStartPosition = {
-                        x: e.clientX,
-                        y: e.clientY
-                    };
-                }
-            }, gestureConfig.gestureStartDelay);
-        });
-
-        touchpad.addEventListener('pointermove', (e) => {
-            if (!gestureState.isClickStarted || !gestureState.swipeStartPosition) return;
-
-            const currentTime = Date.now();
-            const elapsedTime = currentTime - gestureState.clickStartTime;
-            
-            if (elapsedTime < gestureConfig.maxSwipeTime) {
-                const gesture = getGestureDirection(
-                    gestureState.swipeStartPosition.x,
-                    gestureState.swipeStartPosition.y,
-                    e.clientX,
-                    e.clientY
-                );
-
-                if (gesture && gesture !== gestureState.currentGesture) {
-                    gestureState.currentGesture = gesture;
-                    showGestureHint(gesture);
-                }
-            }
-        });
-
-        touchpad.addEventListener('pointerup', (e) => {
-            if (!gestureState.isClickStarted || !gestureState.swipeStartPosition) {
-                resetGestureState();
-                return;
-            }
-
-            const currentTime = Date.now();
-            const elapsedTime = currentTime - gestureState.clickStartTime;
-            
-            if (elapsedTime < gestureConfig.maxSwipeTime) {
-                const gesture = getGestureDirection(
-                    gestureState.swipeStartPosition.x,
-                    gestureState.swipeStartPosition.y,
-                    e.clientX,
-                    e.clientY
-                );
-
-                if (gesture) {
-                    safeFetch(`${serverAddress}/gesture`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ gesture })
-                    });
-                }
-            }
-
-            resetGestureState();
-        });
-
-        
-        // Handle start of touch
-        touchpad.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2) {
-                // Two finger pinch start
-                initialTouchDistance = getTouchDistance(e.touches);
-                isGestureInProgress = true;
-                e.preventDefault();
-            } else if (e.touches.length === 1) {
-                // Single finger swipe start
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                touchStartTime = Date.now();
-            }
-        });
-
-        // Handle touch movement
-        touchpad.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
-                // Handle pinch zoom
-                const currentDistance = getTouchDistance(e.touches);
-                const scale = currentDistance / initialTouchDistance;
-                
-                if (Math.abs(scale - 1) > gestureConfig.minPinchChange) {
-                    safeFetch(`${serverAddress}/gesture`, {
-                        method: 'POST',
-                        body: JSON.stringify({ 
-                            gesture: 'pinch',
-                            scale: scale
-                        })
-                    });
-                }
-            }
-        });
-
-        // Handle touch end
-        touchpad.addEventListener('touchend', (e) => {
-            // Calculate swipe
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-            const deltaTime = Date.now() - touchStartTime;
-
-            if (deltaTime < gestureConfig.maxSwipeTime) {
-                const gesture = getGestureDirection(deltaX, deltaY);
-                if (gesture) {
-                    safeFetch(`${serverAddress}/gesture`, {
-                        method: 'POST',
-                        body: JSON.stringify({ gesture })
-                    });
-                }
-            }
-        });
-
-        // Auto-resize textarea
-        function adjustTextareaHeight() {
-            keyboardInput.style.height = 'auto';
-            keyboardInput.style.height = Math.min(150, Math.max(50, keyboardInput.scrollHeight)) + 'px';
+        function sendSpecialKey(key) {
+            // Use serverURL if available, otherwise use relative path
+            const url = serverURL ? `${serverURL}/type` : '/type';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: key })
+            });
         }
 
-        // ...rest of existing code...
+        function killServer() {
+            // Use serverURL if available, otherwise use relative path
+            const url = serverURL ? `${serverURL}/kill` : '/kill';
+            fetch(url, {
+                method: 'POST'
+            });
+        }
     </script>
 </body>
 </html>
