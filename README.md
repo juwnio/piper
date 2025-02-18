@@ -1,7 +1,8 @@
 # Remote Mouse and Keyboard Controller
 
 This project allows you to control your computer's mouse and keyboard remotely using a web interface.  It consists of a Python server built with Flask and a simple HTML frontend.  The server provides endpoints for controlling the mouse cursor, simulating clicks, typing text, and even shutting down the server.  A QR code is generated for easy access from a mobile device.
-![image](https://github.com/user-attachments/assets/cf4d2ded-0594-46a9-8b1c-1f50749d2709)
+![image](https://github.com/user-attachments/assets/090af24e-e630-4dc3-a583-dab0c4c23105)
+
 
 
 ## Features
@@ -102,6 +103,9 @@ The `CursorController` class has the following methods:
 ### `index.html`
 
 A basic HTML file that provides a minimal user interface with buttons for actions like right click and opening a keyboard interface (implementation for these actions would need to be added with javascript to send requests to the Flask server).  It also includes a network connection check.
+
+![brandbird](https://github.com/user-attachments/assets/027a97e6-ae94-49c9-84eb-7f7ab2a153f7)
+
 
 ## Network Configuration
 
