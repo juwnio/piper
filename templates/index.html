@@ -78,13 +78,14 @@
 
         #touchpad.expanded {
             position: fixed;
-            top: 16px;
-            left: 16px;
-            right: 16px;
-            bottom: 16px;
-            width: auto;
-            height: auto;
-            border-radius: 24px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            z-index: 1000;
         }
 
         .dot-grid {
@@ -116,6 +117,33 @@
             align-items: center;
             width: 80vw;
             margin-top: 1rem;
+            gap: 1rem;
+        }
+
+        .touchpad-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+            min-width: 44px;
+            text-align: center;
+        }
+
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
+        }
+
+        /* Remove old button styles */
+        .expand-btn, .right-click-btn {
+            display: none;
         }
 
         #keyboardInputContainer {
@@ -136,18 +164,34 @@
             color: white;
         }
 
-        .expand-btn {
-            position: absolute;
-            bottom: 1rem;
-            right: 1rem;
-            z-index: 2;
+        .gesture-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 100;
         }
 
-        .right-click-btn {
-            position: absolute;
-            bottom: 1rem;
-            left: 1rem;
-            z-index: 2;
+        .gesture-indicator.visible {
+            display: block;
+            animation: fadeInOut 1s ease;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        #touchpad.focused {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
         #killConfirmation {
@@ -175,29 +219,62 @@
             font-size: 1.2rem;
             opacity: 0.8;
         }
+
+        .expanded-controls {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            right: 1rem;
+            display: none;
+            gap: 1rem;
+            z-index: 1001;
+        }
+
+        #touchpad.expanded ~ .expanded-controls {
+            display: flex;
+        }
+
+        .expanded-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 12px 24px;
+            color: white;
+            border: none;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .expanded-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="logo">Piper</div>
-        <button id="killSwitch">Kill Server<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M12 17C12.2833 17 12.5208 16.9042 12.7125 16.7125C12.9042 16.5208 13 16.2833 13 16C13 15.7167 12.9042 15.4792 12.7125 15.2875C12.5208 15.0958 12.2833 15 12 15C11.7167 15 11.4792 15.0958 11.2875 15.2875C11.0958 15.4792 11 15.7167 11 16C11 16.2833 11.0958 16.5208 11.2875 16.7125C11.4792 16.9042 11.7167 17 12 17ZM11 13H13V7H11V13ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22Z" fill="#FEF7FF"/>
-</svg>
-</button>
+        <button id="killSwitch">Kill Server</button>
     </header>
 
     <main>
         <div id="touchpad">
             <div class="dot-grid"></div>
-            <button class="expand-btn" id="expandBtn">&lt;&gt;</button>
-            <button class="right-click-btn" id="rightClickBtn">right.click</button>
+            <div class="gesture-indicator" id="gestureIndicator"></div>
+        </div>
+        <div class="expanded-controls">
+            <button class="expanded-btn" id="expandedRightClickBtn">right.click</button>
+            <button class="expanded-btn" id="collapseBtn">&gt;&lt;</button>
         </div>
         <div class="controls">
-            <button id="normalRightClickBtn">right.click</button>
+            <div class="touchpad-controls">
+                <button class="control-btn" id="rightClickBtn">right.click</button>
+                <button class="control-btn" id="expandBtn">&lt;&gt;</button>
+            </div>
             <div id="keyboardInputContainer" class="hidden">
                 <input type="text" id="textInput" placeholder="Type here">
             </div>
-            <button id="keyboardToggleBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button class="control-btn" id="keyboardToggleBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M4 19C3.45 19 2.97917 18.8042 2.5875 18.4125C2.19583 18.0208 2 17.55 2 17V7C2 6.45 2.19583 5.97917 2.5875 5.5875C2.97917 5.19583 3.45 5 4 5H20C20.55 5 21.0208 5.19583 21.4125 5.5875C21.8042 5.97917 22 6.45 22 7V17C22 17.55 21.8042 18.0208 21.4125 18.4125C21.0208 18.8042 20.55 19 20 19H4ZM4 17H20V7H4V17ZM8 16H16V14H8V16ZM5 13H7V11H5V13ZM8 13H10V11H8V13ZM11 13H13V11H11V13ZM14 13H16V11H14V13ZM17 13H19V11H17V13ZM5 10H7V8H5V10ZM8 10H10V8H8V10ZM11 10H13V8H11V10ZM14 10H16V8H14V10ZM17 10H19V8H17V10Z" fill="#E7E0EC"/>
 </svg></button>
         </div>
@@ -223,6 +300,10 @@
         const textInput = document.getElementById('textInput');
         const killSwitch = document.getElementById('killSwitch');
         const killConfirmation = document.getElementById('killConfirmation');
+        const gestureIndicator = document.getElementById('gestureIndicator');
+        const expandedRightClickBtn = document.getElementById('expandedRightClickBtn');
+        const collapseBtn = document.getElementById('collapseBtn');
+        let isTouchpadFocused = false;
 
         let lastX = 0;
         let lastY = 0;
@@ -231,11 +312,53 @@
         let lastTap = null;
         let isExpanded = false;
 
+        let touchPoints = new Map();
+        let initialDistance = 0;
+        let initialAngle = 0;
+        let gestureStartTime = 0;
+        const GESTURE_THRESHOLD = 50; // pixels
+        const GESTURE_TIME = 300; // milliseconds
+
+        let gestureState = {
+            isScrolling: false,
+            isPinching: false,
+            isRotating: false,
+            lastScrollPosition: 0,
+            scrollThreshold: 5,
+            pinchThreshold: 0.05,
+            rotateThreshold: 5
+        };
+
+        let focusCheckInterval = null;
+        let lastFocusState = false;
+
+        function getDistance(touch1, touch2) {
+            return Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+        }
+
+        function getAngle(touch1, touch2) {
+            return Math.atan2(
+                touch2.clientY - touch1.clientY,
+                touch2.clientX - touch1.clientX
+            );
+        }
+
         // Create dot grid
         function createDotGrid() {
             dotGrid.innerHTML = '';
-            const cols = Math.floor(dotGrid.offsetWidth / 20);
-            const rows = Math.floor(dotGrid.offsetHeight / 20);
+            const rect = dotGrid.getBoundingClientRect();
+            const spacing = 20; // dot spacing
+            const cols = Math.floor(rect.width / spacing);
+            const rows = Math.floor(rect.height / spacing);
+            
+            // Calculate margins to center the grid
+            const marginX = (rect.width - (cols * spacing)) / 2;
+            const marginY = (rect.height - (rows * spacing)) / 2;
+            
+            dotGrid.style.padding = `${marginY}px ${marginX}px`;
             
             for (let i = 0; i < rows * cols; i++) {
                 const dot = document.createElement('div');
@@ -262,12 +385,19 @@
         function toggleExpanded() {
             isExpanded = !isExpanded;
             touchpad.classList.toggle('expanded', isExpanded);
-            rightClickBtn.style.display = isExpanded ? 'block' : 'none';
-            normalRightClickBtn.style.display = isExpanded ? 'none' : 'block';
-            expandBtn.textContent = isExpanded ? '><' : '<>';
-            document.querySelector('header').style.display = isExpanded ? 'none' : 'flex';
-            document.querySelector('.controls').style.display = isExpanded ? 'none' : 'flex';
-            createDotGrid();
+            
+            if (isExpanded) {
+                document.querySelector('header').style.display = 'none';
+                document.querySelector('.controls').style.display = 'none';
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.querySelector('header').style.display = 'flex';
+                document.querySelector('.controls').style.display = 'flex';
+                document.body.style.overflow = 'auto';
+            }
+            
+            // Recreate dot grid after a small delay to ensure new dimensions are set
+            setTimeout(createDotGrid, 100);
         }
 
         async function getServerURL() {
@@ -297,41 +427,196 @@
             });
         }
 
-        touchpad.addEventListener('touchstart', (e) => {
-            isTouch = true;
-            lastX = e.touches[0].clientX;
-            lastY = e.touches[0].clientY;
-            updateDots(lastX, lastY);
+        function showGestureIndicator(text) {
+            gestureIndicator.textContent = text;
+            gestureIndicator.classList.add('visible');
+            setTimeout(() => {
+                gestureIndicator.classList.remove('visible');
+            }, 1000);
+        }
 
-            const now = Date.now();
-            if (lastTap && (now - lastTap) < 300) {
-                sendRequest('click', { button: 'left' });
-                lastTap = null;
-            } else {
-                lastTap = now;
+        function updateTouchpadFocus(focused) {
+            isTouchpadFocused = focused;
+            touchpad.classList.toggle('focused', focused);
+        }
+
+        touchpad.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            updateTouchpadFocus(true);
+            gestureStartTime = Date.now();
+
+            // Reset gesture state
+            gestureState.isScrolling = false;
+            gestureState.isPinching = false;
+            gestureState.isRotating = false;
+            gestureState.lastScrollPosition = 0;
+
+            // Store all touch points
+            Array.from(e.touches).forEach(touch => {
+                touchPoints.set(touch.identifier, {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    startX: touch.clientX,
+                    startY: touch.clientY,
+                    timestamp: Date.now()
+                });
+            });
+
+            if (e.touches.length === 2) {
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+                initialAngle = getAngle(e.touches[0], e.touches[1]);
+                showGestureIndicator('Two-finger gesture ready');
+            } else if (e.touches.length === 3) {
+                showGestureIndicator('Three-finger gesture detected');
+            } else if (e.touches.length === 1) {
+                isTouch = true;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+                updateDots(lastX, lastY);
+
+                const now = Date.now();
+                if (lastTap && (now - lastTap) < 300) {
+                    sendRequest('click', { button: 'left' });
+                    showGestureIndicator('Double tap');
+                    lastTap = null;
+                } else {
+                    lastTap = now;
+                }
             }
         });
 
         touchpad.addEventListener('touchmove', (e) => {
-            if (!isTouch) return;
             e.preventDefault();
+            if (!isTouchpadFocused) return;
 
-            const currentX = e.touches[0].clientX;
-            const currentY = e.touches[0].clientY;
-            const deltaX = currentX - lastX;
-            const deltaY = currentY - lastY;
+            if (e.touches.length === 2) {
+                handleTwoFingerGesture(e);
+            } else if (e.touches.length === 3) {
+                handleThreeFingerGesture(e);
+            } else if (e.touches.length === 1) {
+                handleSingleFingerMove(e);
+            }
 
-            sendRequest('move', { x: deltaX, y: deltaY });
-            updateDots(currentX, currentY);
-
-            lastX = currentX;
-            lastY = currentY;
+            // Update stored touch points
+            Array.from(e.touches).forEach(touch => {
+                const existing = touchPoints.get(touch.identifier);
+                if (existing) {
+                    touchPoints.set(touch.identifier, {
+                        ...existing,
+                        x: touch.clientX,
+                        y: touch.clientY
+                    });
+                }
+            });
         });
 
-        touchpad.addEventListener('touchend', () => {
-            isTouch = false;
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach(dot => dot.classList.remove('active'));
+        function handleTwoFingerGesture(e) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const initialTouch1 = touchPoints.get(touch1.identifier);
+            const initialTouch2 = touchPoints.get(touch2.identifier);
+
+            if (!initialTouch1 || !initialTouch2) return;
+
+            // Calculate current gesture properties
+            const currentDistance = getDistance(touch1, touch2);
+            const currentAngle = getAngle(touch1, touch2);
+            
+            // Calculate center point of the two fingers
+            const centerY = (touch1.clientY + touch2.clientY) / 2;
+            const initialCenterY = (initialTouch1.startY + initialTouch2.startY) / 2;
+            const deltaY = centerY - initialCenterY;
+
+            // Calculate horizontal movement
+            const centerX = (touch1.clientX + touch2.clientX) / 2;
+            const initialCenterX = (initialTouch1.startX + initialTouch2.startX) / 2;
+            const deltaX = centerX - initialCenterX;
+
+            // Detect pinch
+            const scaleDelta = currentDistance / initialDistance;
+            const scaleChange = Math.abs(scaleDelta - 1);
+
+            if (scaleChange > gestureState.pinchThreshold) {
+                gestureState.isPinching = true;
+                gestureState.isScrolling = false;
+                showGestureIndicator(scaleDelta > 1 ? 'Zoom in' : 'Zoom out');
+                sendRequest('gesture', {
+                    type: 'pinch',
+                    scale: scaleDelta
+                });
+                // Update initial distance to prevent repeated triggers
+                initialDistance = currentDistance;
+            }
+            // Detect scroll if not pinching
+            else if (!gestureState.isPinching && Math.abs(deltaY) > gestureState.scrollThreshold) {
+                gestureState.isScrolling = true;
+                const scrollAmount = deltaY - gestureState.lastScrollPosition;
+                
+                if (Math.abs(scrollAmount) > gestureState.scrollThreshold) {
+                    showGestureIndicator(scrollAmount > 0 ? 'Scroll down' : 'Scroll up');
+                    sendRequest('gesture', {
+                        type: 'scroll',
+                        deltaY: -scrollAmount // Invert for natural scrolling
+                    });
+                    gestureState.lastScrollPosition = deltaY;
+                }
+            }
+        }
+
+        function handleThreeFingerGesture(e) {
+            const touch = e.touches[0];
+            const initialTouch = touchPoints.get(touch.identifier);
+            const deltaX = touch.clientX - initialTouch.startX;
+            const deltaY = touch.clientY - initialTouch.startY;
+            
+            if (Date.now() - gestureStartTime < GESTURE_TIME) {
+                if (Math.abs(deltaX) > GESTURE_THRESHOLD || Math.abs(deltaY) > GESTURE_THRESHOLD) {
+                    const direction = Math.abs(deltaX) > Math.abs(deltaY)
+                        ? (deltaX > 0 ? 'right' : 'left')
+                        : (deltaY > 0 ? 'down' : 'up');
+                    
+                    showGestureIndicator(`Three-finger swipe ${direction}`);
+                    sendRequest('gesture', {
+                        type: 'three_finger_swipe',
+                        direction: direction
+                    });
+                }
+            }
+        }
+
+        function handleSingleFingerMove(e) {
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - lastX;
+            const deltaY = touch.clientY - lastY;
+
+            sendRequest('move', { x: deltaX, y: deltaY });
+            updateDots(touch.clientX, touch.clientY);
+
+            lastX = touch.clientX;
+            lastY = touch.clientY;
+        }
+
+        touchpad.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                updateTouchpadFocus(false);
+                isTouch = false;
+                // Reset gesture state
+                gestureState.isScrolling = false;
+                gestureState.isPinching = false;
+                gestureState.isRotating = false;
+                gestureState.lastScrollPosition = 0;
+                
+                const dots = document.querySelectorAll('.dot');
+                dots.forEach(dot => dot.classList.remove('active'));
+            }
+
+            // Clear ended touch points
+            const activeIds = Array.from(e.touches).map(touch => touch.identifier);
+            for (let id of touchPoints.keys()) {
+                if (!activeIds.includes(id)) {
+                    touchPoints.delete(id);
+                }
+            }
         });
 
         function handleRightClick() {
@@ -365,21 +650,53 @@
             }
         });
 
+        async function checkInputFocus() {
+            try {
+                const response = await fetch('/check-focus');
+                const data = await response.json();
+                
+                if (data.focused !== lastFocusState) {
+                    lastFocusState = data.focused;
+                    if (data.focused) {
+                        toggleKeyboard(true);
+                        showGestureIndicator('Input field detected');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking input focus:', error);
+            }
+        }
+
+        function initializeFocusDetection() {
+            // Check focus every 1 second
+            focusCheckInterval = setInterval(checkInputFocus, 1000);
+        }
+
         killSwitch.addEventListener('click', async () => {
             await sendRequest('kill');
             killConfirmation.classList.add('visible');
         });
 
         expandBtn.addEventListener('click', toggleExpanded);
+        collapseBtn.addEventListener('click', toggleExpanded);
         rightClickBtn.addEventListener('click', handleRightClick);
-        normalRightClickBtn.addEventListener('click', handleRightClick);
+        expandedRightClickBtn.addEventListener('click', handleRightClick);
         keyboardToggleBtn.addEventListener('click', () => toggleKeyboard(true));
         textInput.addEventListener('blur', () => toggleKeyboard(false));
 
         // Initialize
         getServerURL();
         createDotGrid();
+        initializeFocusDetection();
         window.addEventListener('resize', createDotGrid);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(focusCheckInterval);
+            } else {
+                initializeFocusDetection();
+            }
+        });
     </script>
 </body>
 </html>

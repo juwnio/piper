@@ -151,6 +151,39 @@ def type_text():
 
     return jsonify({'status': 'success'})
 
+@app.route('/gesture', methods=['POST'])
+def handle_gesture():
+    data = request.json
+    gesture_type = data.get('type')
+    
+    if gesture_type == 'scroll':
+        delta = data.get('deltaY', 0)
+        # Make scrolling more responsive
+        scroll_amount = int(delta / 5)  # Adjusted sensitivity
+        if abs(scroll_amount) > 0:
+            pyautogui.scroll(scroll_amount)
+    
+    elif gesture_type == 'pinch':
+        scale = data.get('scale', 1)
+        # More responsive zoom thresholds
+        if scale > 1.05:  # Reduced threshold for zooming
+            pyautogui.hotkey('ctrl', '+')
+        elif scale < 0.95:
+            pyautogui.hotkey('ctrl', '-')
+    
+    elif gesture_type == 'three_finger_swipe':
+        direction = data.get('direction')
+        if direction == 'up':
+            pyautogui.hotkey('win', 'tab')
+        elif direction == 'down':
+            pyautogui.hotkey('win', 'd')
+        elif direction == 'left':
+            pyautogui.hotkey('alt', 'left')
+        elif direction == 'right':
+            pyautogui.hotkey('alt', 'right')
+    
+    return jsonify({'status': 'success'})
+
 @app.route('/kill', methods=['POST'])
 def kill_server():
     logger.info("Kill switch activated - shutting down server")
@@ -162,6 +195,39 @@ def kill_server():
     Timer(1.0, shutdown).start()
 
     return jsonify({'status': 'shutting_down'})
+
+@app.route('/input-focus', methods=['POST'])
+def handle_input_focus():
+    """Handle input field focus events from the system"""
+    data = request.json
+    is_focused = data.get('focused', False)
+    return jsonify({'status': 'success', 'focused': is_focused})
+
+@app.route('/check-focus', methods=['GET'])
+def check_focus():
+    """Check if any input field is currently focused"""
+    import win32gui
+    import win32api
+    import win32con
+    
+    try:
+        # Get the focused window
+        hwnd = win32gui.GetForegroundWindow()
+        # Get the focused control
+        focused = win32gui.GetFocus()
+        # Get the class name of the focused control
+        class_name = win32gui.GetClassName(focused).lower()
+        
+        # List of common input field class names
+        input_classes = ['edit', 'textbox', 'richedit', 'textedit']
+        is_input = any(input_class in class_name for input_class in input_classes)
+        
+        return jsonify({
+            'focused': is_input,
+            'class': class_name
+        })
+    except:
+        return jsonify({'focused': False, 'class': None})
 
 if __name__ == '__main__':
     ip = get_local_ip()

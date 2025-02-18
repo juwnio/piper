@@ -1,0 +1,52 @@
+{
+    "two_finger": {
+        "scroll": {
+            "description": "Two finger vertical scroll",
+            "fingers": 2,
+            "action": "scroll",
+            "direction": "vertical"
+        },
+        "horizontal_scroll": {
+            "description": "Two finger horizontal scroll",
+            "fingers": 2,
+            "action": "scroll",
+            "direction": "horizontal"
+        },
+        "pinch": {
+            "description": "Pinch to zoom",
+            "fingers": 2,
+            "action": "zoom"
+        },
+        "rotate": {
+            "description": "Two finger rotate",
+            "fingers": 2,
+            "action": "rotate"
+        }
+    },
+    "three_finger": {
+        "swipe_up": {
+            "description": "Mission Control / Task View",
+            "fingers": 3,
+            "action": "special_key",
+            "keys": ["win", "tab"]
+        },
+        "swipe_down": {
+            "description": "Show Desktop",
+            "fingers": 3,
+            "action": "special_key",
+            "keys": ["win", "d"]
+        },
+        "swipe_left": {
+            "description": "Navigate Back",
+            "fingers": 3,
+            "action": "special_key",
+            "keys": ["alt", "left"]
+        },
+        "swipe_right": {
+            "description": "Navigate Forward",
+            "fingers": 3,
+            "action": "special_key",
+            "keys": ["alt", "right"]
+        }
+    }
+}
